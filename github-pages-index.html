@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台幣換泰銖比價</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  :root{
+    --bg:#11182B; --panel:#1B2440; --panel-2:#212C4D;
+    --gold:#F2A93B; --jade:#2E8B74; --rose:#C97064;
+    --ink:#F4EFE6; --muted:#9AA2BD; --line:#2E3A60;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; background:var(--bg);}
+  .app{
+    min-height:100vh;
+    background: radial-gradient(circle at 50% -10%, rgba(242,169,59,0.14), transparent 55%), var(--bg);
+    color:var(--ink); font-family:'Noto Sans TC', sans-serif;
+    display:flex; justify-content:center; padding:36px 16px 60px;
+  }
+  .shell{ width:100%; max-width:420px; }
+  .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.18em; color:var(--gold); text-transform:uppercase; margin-bottom:8px; }
+  h1{ font-family:'Noto Serif TC', serif; font-weight:900; font-size:27px; line-height:1.35; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:13px; line-height:1.6; margin:0 0 22px; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:14px; }
+  label{ display:block; font-size:12px; color:var(--muted); margin-bottom:8px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; }
+  .amount-row{ display:flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:14px; }
+  .amount-row span{ color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:14px; }
+  .amount-row input{ flex:1; background:none; border:none; outline:none; color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; min-width:0; }
+  button.primary{ width:100%; border:none; border-radius:12px; padding:14px; background:var(--gold); color:#1B1300; font-family:'Noto Sans TC',sans-serif; font-weight:700; font-size:15px; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
+  button.primary:hover{ transform:translateY(-1px); box-shadow:0 8px 20px rgba(242,169,59,0.25); }
+  button.primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
+  button.ghost{ width:100%; border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:12px; padding:11px; font-size:13px; font-family:'Noto Sans TC',sans-serif; cursor:pointer; }
+  button.ghost:hover{ color:var(--ink); border-color:var(--gold); }
+  .status-line{ display:flex; align-items:center; gap:10px; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:13px; }
+  .dot{ width:8px;height:8px;border-radius:50%; background:var(--gold); animation:pulse 1s infinite ease-in-out; }
+  @keyframes pulse{ 0%,100%{opacity:.3;} 50%{opacity:1;} }
+  .race{ display:flex; align-items:flex-end; justify-content:center; gap:22px; height:200px; margin:18px 0 8px; position:relative; }
+  .track{ width:88px; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; position:relative; }
+  .bar{ width:100%; border-radius:10px 10px 4px 4px; background:linear-gradient(180deg, var(--panel-2), var(--line)); height:8%; transition:height 1.1s cubic-bezier(.2,.8,.2,1); position:relative; }
+  .bar.win{ background:linear-gradient(180deg, #FFD27A, var(--gold)); box-shadow:0 0 28px rgba(242,169,59,0.45); }
+  .track-label{ margin-top:10px; font-size:12px; color:var(--muted); text-align:center; line-height:1.4; }
+  .track-amount{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; color:var(--ink); margin-top:2px; }
+  .badge{ position:absolute; top:0; left:50%; transform:translate(-50%,-130%); background:var(--gold); color:#1B1300; font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; white-space:nowrap; }
+  .verdict{ text-align:center; margin:14px 0 4px; }
+  .verdict .diff{ font-family:'Noto Serif TC',serif; font-weight:900; font-size:22px; color:var(--gold); }
+  .verdict .diff-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+  details{ margin-top:10px; }
+  summary{ cursor:pointer; font-size:13px; color:var(--jade); font-weight:600; list-style:none; }
+  summary::-webkit-details-marker{ display:none; }
+  .rate-table{ margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted); }
+  .rate-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); }
+  .rate-row span:last-child{ color:var(--ink); }
+  .note{ font-size:11.5px; color:var(--muted); line-height:1.7; margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); }
+  .note b{ color:var(--rose); }
+  .error-card{ border-color:var(--rose); }
+  .error-card .title{ color:var(--rose); font-weight:700; margin-bottom:6px; }
+  .error-card .msg{ font-size:13px; color:var(--muted); line-height:1.6; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="shell">
+    <div class="eyebrow">換匯比價 · TWD → THB</div>
+    <h1>台幣換泰銖，<br/>哪條路線贏？</h1>
+    <p class="sub">即時比較「直接換泰銖」vs「先換美金再換泰銖」，數字來自台灣銀行 + SuperRich 即時匯率。</p>
+
+    <div class="card">
+      <label>要換多少台幣</label>
+      <div class="amount-row">
+        <span>NT$</span>
+        <input id="amountInput" type="number" value="50000" min="100" step="1000" />
+      </div>
+      <button class="primary" id="goBtn">開始比價</button>
+    </div>
+
+    <div class="card" id="loadingCard" hidden>
+      <div class="status-line">
+        <span class="dot"></span>
+        <span id="statusText">連線到台灣銀行...</span>
+      </div>
+    </div>
+
+    <div class="card error-card" id="errorCard" hidden>
+      <div class="title">查詢失敗</div>
+      <div class="msg" id="errorMsg"></div>
+      <button class="ghost" id="retryBtn" style="margin-top:12px;">再試一次</button>
+    </div>
+
+    <div class="card" id="resultCard" hidden>
+      <div class="race">
+        <div class="track">
+          <div id="badgeA" class="badge" hidden>划算</div>
+          <div class="bar" id="barA"></div>
+          <div class="track-label">路徑 A<br/>直接換泰銖</div>
+          <div class="track-amount" id="amtA">฿0</div>
+        </div>
+        <div class="track">
+          <div id="badgeB" class="badge" hidden>划算</div>
+          <div class="bar" id="barB"></div>
+          <div class="track-label">路徑 B<br/>先換美金再換</div>
+          <div class="track-amount" id="amtB">฿0</div>
+        </div>
+      </div>
+
+      <div class="verdict">
+        <div class="diff" id="diffText">—</div>
+        <div class="diff-sub" id="diffSub">—</div>
+      </div>
+
+      <details>
+        <summary>查看抓到的即時匯率</summary>
+        <div class="rate-table" id="rateTable"></div>
+      </details>
+
+      <div class="note">
+        查詢時間：<span id="ts"></span>。<b>注意</b>：匯率每天甚至每小時變動，不同分店也會有差異，出發前請以實際現場匯率為準。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // 把這個換成你自己 Apps Script 部署的 /exec 網址
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxU4bGR1NDKx2dHodcOd1ZysQ0g4SSaQMVlpvMFh7tAhIPMif6JEzWUSiE3TAFN33Hf/exec';
+
+  const goBtn = document.getElementById('goBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const amountInput = document.getElementById('amountInput');
+  const loadingCard = document.getElementById('loadingCard');
+  const errorCard = document.getElementById('errorCard');
+  const resultCard = document.getElementById('resultCard');
+  const statusText = document.getElementById('statusText');
+  const errorMsg = document.getElementById('errorMsg');
+
+  const statuses = ['連線到台灣銀行...','連線到 SuperRich (BTS Asok)...','解析即時匯率...','計算兩條路徑...'];
+  let statusTimer = null;
+  function startStatusCycle(){
+    let i = 0; statusText.textContent = statuses[0];
+    statusTimer = setInterval(()=>{ i=(i+1)%statuses.length; statusText.textContent = statuses[i]; }, 850);
+  }
+  function stopStatusCycle(){ clearInterval(statusTimer); }
+
+  function fmtTHB(n){ return '\u0e3f' + Number(n).toLocaleString('zh-TW', {maximumFractionDigits:0}); }
+
+  function animateNumber(el, to, duration){
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min(1, (now-start)/duration);
+      const eased = 1 - Math.pow(1-p, 3);
+      el.textContent = fmtTHB(Math.round(to * eased));
+      if(p < 1) requestAnimationFrame(tick); else el.textContent = fmtTHB(to);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function showOnly(card){ [loadingCard, errorCard, resultCard].forEach(c => c.hidden = (c !== card)); }
+
+  // 方法一：直接 fetch（最簡單，但可能被 CORS 擋）
+  async function tryFetch(url){
+    const res = await fetch(url, { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  }
+
+  // 方法二：JSONP（用 <script> 標籤繞過 CORS，當方法一失敗時自動切換）
+  function tryJSONP(url, timeoutMs){
+    return new Promise((resolve, reject)=>{
+      const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+      const script = document.createElement('script');
+      let finished = false;
+      const cleanup = ()=>{ delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); clearTimeout(timer); };
+      window[cbName] = (data)=>{ if(finished) return; finished = true; cleanup(); resolve(data); };
+      script.onerror = ()=>{ if(finished) return; finished = true; cleanup(); reject(new Error('JSONP 載入失敗')); };
+      const timer = setTimeout(()=>{ if(finished) return; finished = true; cleanup(); reject(new Error('連線逾時')); }, timeoutMs || 15000);
+      script.src = url + (url.indexOf('?')>-1 ? '&' : '?') + 'callback=' + cbName;
+      document.body.appendChild(script);
+    });
+  }
+
+  async function queryRates(amount){
+    const url = API_URL + '?amount=' + amount;
+    try{
+      return await tryFetch(url);
+    }catch(e1){
+      try{
+        return await tryJSONP(url, 15000);
+      }catch(e2){
+        throw new Error('兩種連線方式都失敗了（' + e1.message + ' / ' + e2.message + '）');
+      }
+    }
+  }
+
+  async function runQuery(){
+    const amount = Number(amountInput.value);
+    if(!amount || amount <= 0){ alert('請輸入正確的台幣金額'); return; }
+
+    goBtn.disabled = true;
+    showOnly(loadingCard);
+    startStatusCycle();
+
+    try{
+      const data = await queryRates(amount);
+      if(data.error){ throw new Error(data.message || '腳本回報錯誤'); }
+      renderResult(data);
+      stopStatusCycle();
+      showOnly(resultCard);
+    }catch(err){
+      stopStatusCycle();
+      errorMsg.textContent = '無法取得即時匯率：' + err.message + '。請確認 Apps Script 已部署為「任何人」可存取，或稍後再試。';
+      showOnly(errorCard);
+    }finally{
+      goBtn.disabled = false;
+    }
+  }
+
+  function renderResult(data){
+    const pathA = data['路徑A_直接換泰銖'];
+    const pathBObj = data['路徑B_先換美金再換泰銖'] || {};
+    const pathB = pathBObj['最終泰銖'];
+    const usdAmt = pathBObj['換到的美金'];
+    const rates = data['抓到的匯率'] || {};
+    const diff = data['差額泰銖'];
+    const verdict = data['結論'] || '';
+    const ts = data['查詢時間'] || '';
+
+    const maxV = Math.max(pathA, pathB);
+    const minV = Math.min(pathA, pathB);
+    const span = (maxV - minV) || 1;
+    const heightA = 22 + ((pathA - minV) / span) * 78;
+    const heightB = 22 + ((pathB - minV) / span) * 78;
+
+    document.getElementById('barA').style.height = heightA + '%';
+    document.getElementById('barB').style.height = heightB + '%';
+    document.getElementById('barA').classList.toggle('win', pathA >= pathB);
+    document.getElementById('barB').classList.toggle('win', pathB > pathA);
+    document.getElementById('badgeA').hidden = !(pathA >= pathB);
+    document.getElementById('badgeB').hidden = !(pathB > pathA);
+
+    animateNumber(document.getElementById('amtA'), pathA, 1100);
+    animateNumber(document.getElementById('amtB'), pathB, 1100);
+
+    document.getElementById('diffText').textContent =
+      (diff >= 0 ? '路徑 B 多換 ' : '路徑 A 多換 ') + fmtTHB(Math.abs(diff));
+    document.getElementById('diffSub').textContent = verdict;
+    document.getElementById('ts').textContent = ts;
+
+    const rt = document.getElementById('rateTable');
+    rt.innerHTML = [
+      ['台銀美金現金賣出', rates['台銀美金現金賣出價']],
+      ['SuperRich 買台幣', rates['SuperRich買入台幣價']],
+      ['SuperRich 買美金', rates['SuperRich買入美金價']],
+      ['路徑B 換到美金', usdAmt + ' USD']
+    ].map(([k,v]) => '<div class="rate-row"><span>' + k + '</span><span>' + v + '</span></div>').join('');
+  }
+
+  goBtn.addEventListener('click', runQuery);
+  retryBtn.addEventListener('click', runQuery);
+  amountInput.addEventListener('keydown', e => { if(e.key === 'Enter') runQuery(); });
+})();
+</script>
+</body>
+</html>
