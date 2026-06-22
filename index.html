@@ -28,6 +28,22 @@
   .amount-row{ display:flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:14px; }
   .amount-row span{ color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:14px; }
   .amount-row input{ flex:1; background:none; border:none; outline:none; color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; min-width:0; }
+  .quick-amounts{ display:flex; gap:8px; margin-bottom:14px; }
+  .quick-btn{
+    flex:1; border:1px solid var(--line); background:var(--panel-2); color:var(--muted);
+    border-radius:10px; padding:9px 0; font-size:13px; font-family:'IBM Plex Mono',monospace;
+    font-weight:600; cursor:pointer; transition:border-color .15s ease, color .15s ease;
+  }
+  .quick-btn:hover{ border-color:var(--gold); color:var(--ink); }
+  .quick-btn.active{ border-color:var(--gold); color:var(--gold); background:rgba(242,169,59,0.08); }
+  .declare-note{
+    margin-top:12px; padding:10px 12px; border-radius:10px;
+    background:rgba(201,112,100,0.1); border:1px solid rgba(201,112,100,0.4);
+    font-size:11.5px; line-height:1.7; color:var(--ink);
+  }
+  .declare-note .line{ display:flex; gap:6px; margin-bottom:4px; }
+  .declare-note .line:last-child{ margin-bottom:0; }
+  .declare-note .icon{ color:var(--rose); flex-shrink:0; }
   button.primary{ width:100%; border:none; border-radius:12px; padding:14px; background:var(--gold); color:#1B1300; font-family:'Noto Sans TC',sans-serif; font-weight:700; font-size:15px; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
   button.primary:hover{ transform:translateY(-1px); box-shadow:0 8px 20px rgba(242,169,59,0.25); }
   button.primary:disabled{ opacity:.5; cursor:not-allowed; transform:none; box-shadow:none; }
@@ -73,6 +89,12 @@
         <span>NT$</span>
         <input id="amountInput" type="number" value="50000" min="100" step="1000" />
       </div>
+      <div class="quick-amounts">
+        <button type="button" class="quick-btn" data-amount="10000">1萬</button>
+        <button type="button" class="quick-btn" data-amount="30000">3萬</button>
+        <button type="button" class="quick-btn active" data-amount="50000">5萬</button>
+        <button type="button" class="quick-btn" data-amount="100000">10萬</button>
+      </div>
       <button class="primary" id="goBtn">開始比價</button>
     </div>
 
@@ -110,13 +132,15 @@
         <div class="diff-sub" id="diffSub">—</div>
       </div>
 
+      <div class="declare-note" id="declareNote" hidden></div>
+
       <details>
         <summary>查看抓到的即時匯率</summary>
         <div class="rate-table" id="rateTable"></div>
       </details>
 
       <div class="note">
-        查詢時間：<span id="ts"></span>。<b>注意</b>：匯率每天甚至每小時變動，不同分店也會有差異，出發前請以實際現場匯率為準。
+        查詢時間：<span id="ts"></span>　·　匯率更新於：<span id="rateTs"></span>。<b>注意</b>：匯率資料每天定時更新一次，不同分店也會有差異，出發前請以實際現場匯率為準。
       </div>
     </div>
   </div>
@@ -130,6 +154,7 @@
   const goBtn = document.getElementById('goBtn');
   const retryBtn = document.getElementById('retryBtn');
   const amountInput = document.getElementById('amountInput');
+  const quickBtns = document.querySelectorAll('.quick-btn');
   const loadingCard = document.getElementById('loadingCard');
   const errorCard = document.getElementById('errorCard');
   const resultCard = document.getElementById('resultCard');
@@ -247,6 +272,7 @@
       (diff >= 0 ? '路徑 B 多換 ' : '路徑 A 多換 ') + fmtTHB(Math.abs(diff));
     document.getElementById('diffSub').textContent = verdict;
     document.getElementById('ts').textContent = ts;
+    document.getElementById('rateTs').textContent = data['匯率更新時間'] || ts;
 
     const rt = document.getElementById('rateTable');
     rt.innerHTML = [
@@ -255,11 +281,48 @@
       ['SuperRich 買美金', rates['SuperRich買入美金價']],
       ['路徑B 換到美金', usdAmt + ' USD']
     ].map(([k,v]) => '<div class="rate-row"><span>' + k + '</span><span>' + v + '</span></div>').join('');
+
+    renderDeclareNote(data['輸入台幣金額'] || Number(amountInput.value), usdAmt, pathA);
+  }
+
+  // 申報門檻提醒：台幣出境10萬、外幣出境等值1萬美金、泰國入境外幣等值2萬美金
+  function renderDeclareNote(twdAmount, usdAmount, pathAThb){
+    const lines = [];
+
+    if (twdAmount > 100000) {
+      lines.push('新台幣現金出境限額為10萬元，超過部分不是申報就能帶，需要事先向中央銀行申請核准，否則超額部分會被查扣。');
+    }
+    if (usdAmount > 10000) {
+      lines.push('换成美金後超過等值1萬美元，台灣出境時要主動向海關申報，未申報的超額部分會被沒入。');
+    }
+    if (usdAmount > 20000) {
+      lines.push('這個美金金額也超過泰國入境申報門檻（等值2萬美元），抵達泰國時也要向當地海關申報。');
+    }
+
+    const noteEl = document.getElementById('declareNote');
+    if (lines.length === 0) {
+      noteEl.hidden = true;
+      noteEl.innerHTML = '';
+      return;
+    }
+    noteEl.hidden = false;
+    noteEl.innerHTML = lines.map(t => '<div class="line"><span class="icon">⚠</span><span>' + t + '</span></div>').join('');
   }
 
   goBtn.addEventListener('click', runQuery);
   retryBtn.addEventListener('click', runQuery);
   amountInput.addEventListener('keydown', e => { if(e.key === 'Enter') runQuery(); });
+
+  quickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      amountInput.value = btn.dataset.amount;
+      quickBtns.forEach(b => b.classList.toggle('active', b === btn));
+      runQuery();
+    });
+  });
+  amountInput.addEventListener('input', () => {
+    quickBtns.forEach(b => b.classList.toggle('active', b.dataset.amount === amountInput.value));
+  });
 })();
 </script>
 </body>
