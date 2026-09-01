@@ -23,6 +23,21 @@
   .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.18em; color:var(--gold); text-transform:uppercase; margin-bottom:8px; }
   h1{ font-family:'Noto Serif TC', serif; font-weight:900; font-size:27px; line-height:1.35; margin:0 0 6px; }
   .sub{ color:var(--muted); font-size:13px; line-height:1.6; margin:0 0 22px; }
+  .path-preview{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .path-pill{
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:10px 10px;
+  }
+  .path-letter{
+    width:22px; height:22px; border-radius:50%; background:var(--gold); color:#1B1300;
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .path-text{ font-size:12px; color:var(--ink); line-height:1.4; }
+  .vs{ font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); flex-shrink:0; }
+  .sub-claim{ font-size:14.5px; color:var(--ink); line-height:1.6; margin:0 0 22px; font-weight:500; }
+  .sub-claim b{ color:var(--gold); }
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:14px; }
   label{ display:block; font-size:12px; color:var(--muted); margin-bottom:8px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; }
   .amount-row{ display:flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:14px; }
@@ -81,7 +96,18 @@
   <div class="shell">
     <div class="eyebrow">換匯比價 · TWD → THB</div>
     <h1>台幣換泰銖，<br/>哪條路線贏？</h1>
-    <p class="sub">即時比較「直接換泰銖」vs「先換美金再換泰銖」，數字來自台灣銀行 + SuperRich 即時匯率。</p>
+    <div class="path-preview">
+      <div class="path-pill">
+        <span class="path-letter">A</span>
+        <span class="path-text">泰國當地<br/>直接換泰銖</span>
+      </div>
+      <span class="vs">vs</span>
+      <div class="path-pill">
+        <span class="path-letter">B</span>
+        <span class="path-text">台灣先換美金<br/>到泰國再換</span>
+      </div>
+    </div>
+    <p class="sub-claim">實測常差 <b>3~4%</b>，遠大於匯率每天的正常波動。</p>
 
     <div class="card">
       <label>要換多少台幣</label>
@@ -116,13 +142,13 @@
         <div class="track">
           <div id="badgeA" class="badge" hidden>划算</div>
           <div class="bar" id="barA"></div>
-          <div class="track-label">路徑 A<br/>直接換泰銖</div>
+          <div class="track-label">路徑 A<br/>當地直接換</div>
           <div class="track-amount" id="amtA">฿0</div>
         </div>
         <div class="track">
           <div id="badgeB" class="badge" hidden>划算</div>
           <div class="bar" id="barB"></div>
-          <div class="track-label">路徑 B<br/>先換美金再換</div>
+          <div class="track-label">路徑 B<br/>台灣先換美金</div>
           <div class="track-amount" id="amtB">฿0</div>
         </div>
       </div>
