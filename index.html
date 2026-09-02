@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>台幣換泰銖比價</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2311182B'/%3E%3Crect x='7' y='16' width='7' height='9' rx='2' fill='%232E3A60'/%3E%3Crect x='18' y='7' width='7' height='18' rx='2' fill='%23F2A93B'/%3E%3C/svg%3E">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
   :root{
@@ -14,14 +15,21 @@
   *{box-sizing:border-box;}
   html,body{margin:0; background:var(--bg);}
   .app{
-    min-height:100vh;
+    min-height:100vh; min-height:100dvh;
     background: radial-gradient(circle at 50% -10%, rgba(242,169,59,0.14), transparent 55%), var(--bg);
     color:var(--ink); font-family:'Noto Sans TC', sans-serif;
     display:flex; justify-content:center; padding:36px 16px 60px;
   }
   .shell{ width:100%; max-width:420px; }
+  /* 微噪點：固定在最上層但不吃點擊，避免捲動時重繪 */
+  .grain{ position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"); }
   .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.18em; color:var(--gold); text-transform:uppercase; margin-bottom:8px; }
-  h1{ font-family:'Noto Serif TC', serif; font-weight:900; font-size:27px; line-height:1.35; margin:0 0 6px; }
+  h1{ font-family:'Noto Serif TC', serif; font-weight:900; font-size:27px; line-height:1.3;
+    letter-spacing:-0.015em; text-wrap:balance; margin:0 0 6px; }
+  p, .hint-line, .diff-sub, .note{ text-wrap:pretty; }
+  .track-amount, .amount-row input, .rate-row span, .verdict .diff, .verdict .ctx{
+    font-variant-numeric:tabular-nums; }
   .sub{ color:var(--muted); font-size:13px; line-height:1.6; margin:0 0 22px; }
   .path-preview{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
   .path-pill{
@@ -41,6 +49,8 @@
   .card{ background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:20px; margin-bottom:14px; }
   label{ display:block; font-size:12px; color:var(--muted); margin-bottom:8px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; }
   .amount-row{ display:flex; align-items:center; gap:8px; background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin-bottom:14px; }
+  .amount-row.invalid{ border-color:var(--rose); }
+  .field-error{ color:var(--rose); font-size:12px; margin:-8px 0 12px; }
   .amount-row span{ color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:14px; }
   .amount-row input{ flex:1; background:none; border:none; outline:none; color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; min-width:0; }
   .quick-amounts{ display:flex; gap:8px; margin-bottom:14px; }
@@ -66,19 +76,52 @@
   button.ghost:hover{ color:var(--ink); border-color:var(--gold); }
   .status-line{ display:flex; align-items:center; gap:10px; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:13px; }
   .dot{ width:8px;height:8px;border-radius:50%; background:var(--gold); animation:pulse 1s infinite ease-in-out; }
+  .skeleton{ background:linear-gradient(90deg, var(--panel-2) 25%, #26325a 37%, var(--panel-2) 63%);
+    background-size:400% 100%; animation:shimmer 1.4s ease infinite; border-radius:8px; }
+  @keyframes shimmer{ 0%{background-position:100% 0;} 100%{background-position:0 0;} }
+  .sk-ctx{ height:12px; width:110px; margin:6px auto 14px; }
+  .sk-num{ height:44px; width:210px; margin:0 auto 12px; border-radius:10px; }
+  .sk-sub{ height:12px; width:76%; margin:0 auto 26px; }
+  .sk-race{ display:flex; align-items:flex-end; justify-content:center; gap:22px; height:150px; }
+  .sk-bar{ width:88px; }
   @keyframes pulse{ 0%,100%{opacity:.3;} 50%{opacity:1;} }
-  .race{ display:flex; align-items:flex-end; justify-content:center; gap:22px; height:200px; margin:18px 0 8px; position:relative; }
+  .race{ display:flex; align-items:flex-end; justify-content:center; gap:22px; height:150px; margin:30px 0 8px; position:relative; }
   .track{ width:88px; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; position:relative; }
   .bar{ width:100%; border-radius:10px 10px 4px 4px; background:linear-gradient(180deg, var(--panel-2), var(--line)); height:8%; transition:height 1.1s cubic-bezier(.2,.8,.2,1); position:relative; }
   .bar.win{ background:linear-gradient(180deg, #FFD27A, var(--gold)); box-shadow:0 0 28px rgba(242,169,59,0.45); }
   .track-label{ margin-top:10px; font-size:12px; color:var(--muted); text-align:center; line-height:1.4; }
   .track-amount{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; color:var(--ink); margin-top:2px; }
   .badge{ position:absolute; top:0; left:50%; transform:translate(-50%,-130%); background:var(--gold); color:#1B1300; font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; white-space:nowrap; }
-  .verdict{ text-align:center; margin:14px 0 4px; }
-  .verdict .diff{ font-family:'Noto Serif TC',serif; font-weight:900; font-size:22px; color:var(--gold); }
-  .verdict .diff-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
-  details{ margin-top:10px; }
-  summary{ cursor:pointer; font-size:13px; color:var(--jade); font-weight:600; list-style:none; }
+  .verdict{ text-align:left; margin:2px 0 18px; }
+  .verdict .ctx{ display:inline-block; font-size:13.5px; color:var(--muted);
+    background:var(--panel-2); border:1px solid var(--line); border-radius:999px;
+    padding:5px 12px; margin-bottom:12px; }
+  .verdict .ctx b{ color:var(--ink); font-weight:700; font-size:15px;
+    font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; }
+  .verdict .diff-sub{ max-width:34ch; }
+  .verdict .diff{ font-family:'Noto Serif TC',serif; font-weight:900; font-size:44px; line-height:1.1;
+    color:var(--gold); letter-spacing:-0.02em; }
+  .verdict .diff small{ font-size:20px; font-weight:700; }
+  .verdict .diff-sub{ font-size:13.5px; color:var(--ink); margin-top:10px; font-weight:500; line-height:1.6; }
+  .verdict .diff-sub b{ color:var(--gold); }
+  .verdict .diff-sub em{ display:block; font-style:normal; color:var(--muted); font-size:12px;
+    font-weight:400; margin-top:3px; }
+  .explainer{ margin-top:18px; }
+  .explainer .cap{ font-size:11px; letter-spacing:0.16em; color:var(--muted);
+    font-family:'IBM Plex Mono',monospace; text-transform:uppercase; margin-bottom:10px; }
+  details{ margin-top:16px; }
+  summary{ cursor:pointer; font-size:13px; font-weight:600; color:var(--ink); list-style:none;
+    display:inline-flex; align-items:center; gap:9px;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:999px;
+    padding:8px 15px;
+    transition:color .15s ease, border-color .15s ease, background .15s ease, transform .1s ease; }
+  summary:hover{ color:var(--gold); border-color:var(--gold); background:rgba(242,169,59,0.10); }
+  summary:active{ transform:scale(.97); }
+  details[open] summary{ color:var(--gold); border-color:var(--gold); background:rgba(242,169,59,0.10); }
+  summary::after{ content:''; width:6px; height:6px; border-right:1.5px solid currentColor;
+    border-bottom:1.5px solid currentColor; transform:rotate(45deg) translate(-1px,-1px);
+    transition:transform .2s ease; }
+  details[open] summary::after{ transform:rotate(-135deg) translate(-2px,-2px); }
   summary::-webkit-details-marker{ display:none; }
   .rate-table{ margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted); }
   .rate-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--line); }
@@ -97,66 +140,57 @@
     .app{ padding:64px 32px 90px; }
     .shell{ max-width:940px; display:grid; gap:48px; align-items:start;
       grid-template-columns:minmax(0,1fr) minmax(0,420px); }
-    .col-intro{ position:sticky; top:64px; }
+    .shell{ grid-template-rows:auto 1fr; align-items:start; }
+    .col-intro{ grid-column:1; grid-row:1; }
+    .explainer{ grid-column:1; grid-row:2; margin-top:4px; }
+    .col-main{ grid-column:2; grid-row:1 / span 2; }
     h1{ font-size:37px; }
     .sub-claim{ font-size:16px; }
     .path-text{ font-size:13px; }
-    .race{ height:230px; }
+    .race{ height:170px; }
+    .verdict .diff{ font-size:52px; }
   }
+  /* 系統開啟「減少動態效果」時關掉所有動畫與轉場（有些人看了會暈眩） */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+      scroll-behavior:auto !important;
+    }
+    .dot{ animation:none; opacity:.85; }
+  }
+  /* 鍵盤操作要看得見焦點（無障礙要求，不是選配） */
+  :focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:6px; }
+  button.primary:active{ transform:translateY(1px) scale(.995); box-shadow:none; }
+  .quick-btn:active{ transform:scale(.98); }
+  .quick-btn{ transition:border-color .15s ease, color .15s ease, transform .1s ease; }
+  @keyframes verdictFlash{ from{ opacity:.3; transform:translateY(-4px);} to{ opacity:1; transform:none;} }
+  .verdict.flash{ animation:verdictFlash .34s cubic-bezier(.2,.8,.2,1); }
+  .linkbtn{ background:none; border:none; padding:0; margin:0 0 0 2px; cursor:pointer;
+    color:var(--muted); font:inherit; text-decoration:underline; text-underline-offset:2px; }
+  .linkbtn:hover{ color:var(--ink); }
   [hidden]{ display:none !important; }
 </style>
 </head>
 <body>
-<div class="app">
+<div class="grain" aria-hidden="true"></div>
+<main class="app">
   <div class="shell">
-   <div class="col-intro">
+   <header class="col-intro">
     <div class="eyebrow">換匯比價 · TWD → THB</div>
     <h1>台幣換泰銖，<br/>哪條路線贏？</h1>
-    <div class="path-preview">
-      <div class="path-pill">
-        <span class="path-letter">A</span>
-        <span class="path-text">泰國當地<br/>直接換泰銖</span>
-      </div>
-      <span class="vs">vs</span>
-      <div class="path-pill">
-        <span class="path-letter">B</span>
-        <span class="path-text">台灣先換美金<br/>到泰國再換</span>
-      </div>
-    </div>
-    <p class="hint-line">B 要多跑一趟：出國前得先到台灣的銀行把台幣換成美金，到泰國再換一次。</p>
     <p class="sub-claim">實測常差 <b>3~4%</b>，遠大於匯率每天的正常波動。</p>
-   </div>
+   </header>
 
    <div class="col-main">
-    <div class="card">
-      <label>要換多少台幣</label>
-      <div class="amount-row">
-        <span>NT$</span>
-        <input id="amountInput" type="number" value="50000" min="100" step="1000" />
+    <section class="card" id="resultCard" aria-live="polite" hidden>
+      <div class="verdict">
+        <div class="ctx" id="verdictCtx">—</div>
+        <div class="diff" id="diffText">—</div>
+        <div class="diff-sub" id="diffSub">—</div>
       </div>
-      <div class="quick-amounts">
-        <button type="button" class="quick-btn" data-amount="10000">1萬</button>
-        <button type="button" class="quick-btn" data-amount="30000">3萬</button>
-        <button type="button" class="quick-btn active" data-amount="50000">5萬</button>
-        <button type="button" class="quick-btn" data-amount="100000">10萬</button>
-      </div>
-      <button class="primary" id="goBtn">開始比價</button>
-    </div>
 
-    <div class="card" id="loadingCard" hidden>
-      <div class="status-line">
-        <span class="dot"></span>
-        <span id="statusText">連線到台灣銀行...</span>
-      </div>
-    </div>
-
-    <div class="card error-card" id="errorCard" hidden>
-      <div class="title">查詢失敗</div>
-      <div class="msg" id="errorMsg"></div>
-      <button class="ghost" id="retryBtn" style="margin-top:12px;">再試一次</button>
-    </div>
-
-    <div class="card" id="resultCard" hidden>
       <div class="race">
         <div class="track">
           <div id="badgeA" class="badge" hidden>划算</div>
@@ -172,10 +206,6 @@
         </div>
       </div>
 
-      <div class="verdict">
-        <div class="diff" id="diffText">—</div>
-        <div class="diff-sub" id="diffSub">—</div>
-      </div>
 
       <div class="declare-note" id="declareNote" hidden></div>
 
@@ -184,13 +214,68 @@
         <div class="rate-table" id="rateTable"></div>
       </details>
 
-      <div class="note">
-        匯率資料時間：<span id="rateTs"></span>（每天定時更新一次）。<b>注意</b>：不同分店的匯率會有差異，出發前請以現場實際匯率為準。
+      <footer class="note">
+        匯率資料時間：<span id="rateTs"></span>（<button type="button" class="linkbtn" id="refreshBtn">重新抓取</button>）。<b>注意</b>：不同分店的匯率會有差異，出發前請以現場實際匯率為準。
+      </footer>
+    </section>
+
+    <div class="card" id="loadingCard" hidden aria-busy="true">
+      <div class="skeleton sk-ctx"></div>
+      <div class="skeleton sk-num"></div>
+      <div class="skeleton sk-sub"></div>
+      <div class="sk-race">
+        <div class="skeleton sk-bar" style="height:62%"></div>
+        <div class="skeleton sk-bar" style="height:100%"></div>
+      </div>
+      <div class="status-line" style="justify-content:center;margin-top:16px;">
+        <span class="dot"></span>
+        <span id="statusText">連線到台灣銀行...</span>
       </div>
     </div>
+
+    <div class="card error-card" id="errorCard" hidden>
+      <div class="title">查詢失敗</div>
+      <div class="msg" id="errorMsg"></div>
+      <button class="ghost" id="retryBtn" style="margin-top:12px;">再試一次</button>
+    </div>
+
+    <div class="card">
+      <label>換多少台幣（可手動輸入）</label>
+      <div class="amount-row">
+        <span>NT$</span>
+        <input id="amountInput" type="number" value="50000" min="100" step="1000" />
+      </div>
+      <p class="field-error" id="amountError" hidden></p>
+      <div class="quick-amounts">
+        <button type="button" class="quick-btn" data-amount="10000">1萬</button>
+        <button type="button" class="quick-btn" data-amount="30000">3萬</button>
+        <button type="button" class="quick-btn active" data-amount="50000">5萬</button>
+        <button type="button" class="quick-btn" data-amount="100000">10萬</button>
+      </div>
+      <button class="primary" id="goBtn">重新比價</button>
+    </div>
+
+
    </div>
+
+  <section class="explainer" aria-label="兩條路線說明">
+    <div class="cap">兩條路線是什麼</div>
+    <div class="path-preview">
+      <div class="path-pill">
+        <span class="path-letter">A</span>
+        <span class="path-text">帶台幣泰國當地<br/>直接換泰銖</span>
+      </div>
+      <span class="vs">vs</span>
+      <div class="path-pill">
+        <span class="path-letter">B</span>
+        <span class="path-text">台灣先換美金<br/>到泰國再換</span>
+      </div>
+    </div>
+    <p class="hint-line">B 要多跑一趟：出國前得先到台灣的銀行把台幣換成美金，到泰國再換一次。</p>
+  </section>
+
   </div>
-</div>
+</main>
 
 <script>
 (function(){
@@ -215,9 +300,60 @@
   }
   function stopStatusCycle(){ clearInterval(statusTimer); }
 
+  // 匯率一天才更新一次，抓過就留著；之後改金額直接在本機算，不用再等網路
+  let cachedRates = null;
+
+  function extractRates(data){
+    const r = data['抓到的匯率'] || {};
+    return {
+      bot: Number(r['台銀美金現金賣出價']),
+      twd: Number(r['SuperRich買入台幣價']),
+      usd: Number(r['SuperRich買入美金價']),
+      branch: r['SuperRich分店'],
+      rateTs: data['匯率更新時間'] || data['查詢時間'] || ''
+    };
+  }
+
+  // 公式與後端 compareRates() 相同：A = 台幣×買台幣價；B =（台幣÷台銀美金賣出）×買美金價
+  function buildResult(twd, r){
+    const round2 = n => Math.round(n * 100) / 100;
+    const pathA = twd * r.twd;
+    const usdAmount = twd / r.bot;
+    const pathB = usdAmount * r.usd;
+    return {
+      '匯率更新時間': r.rateTs,
+      '輸入台幣金額': twd,
+      '抓到的匯率': {
+        '台銀美金現金賣出價': r.bot,
+        'SuperRich買入台幣價': r.twd,
+        'SuperRich買入美金價': r.usd,
+        'SuperRich分店': r.branch
+      },
+      '路徑A_直接換泰銖': round2(pathA),
+      '路徑B_先換美金再換泰銖': { '換到的美金': round2(usdAmount), '最終泰銖': round2(pathB) },
+      '差額泰銖': round2(pathB - pathA)
+    };
+  }
+
+  // 重算後讓結果閃一下，否則金額沒變時會以為「按了沒反應」
+  function flashVerdict(){
+    if (reduceMotion()) return;
+    const el = document.querySelector('.verdict');
+    if(!el) return;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
   function fmtTHB(n){ return '\u0e3f' + Number(n).toLocaleString('zh-TW', {maximumFractionDigits:0}); }
 
+  // 使用者是否在系統開了「減少動態效果」
+  function reduceMotion(){
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
   function animateNumber(el, to, duration){
+    if (reduceMotion()) { el.textContent = fmtTHB(to); return; } // 不跳動，直接顯示結果
     const start = performance.now();
     function tick(now){
       const p = Math.min(1, (now-start)/duration);
@@ -240,11 +376,13 @@
   function doReveal(){
     {
       const r = resultCard.getBoundingClientRect();
-      if (r.bottom <= window.innerHeight + 4) return; // 整張都看得到就不用捲
+      // 整張都在畫面內就不用捲；結果卡在輸入框上方，所以往上往下都要處理
+      if (r.top >= -4 && r.bottom <= window.innerHeight + 4) return;
 
       const se = document.scrollingElement || document.documentElement;
       const start = se.scrollTop;
       const target = Math.max(0, start + r.top - 12);
+      if (reduceMotion()) { se.scrollTop = target; return; } // 直接跳到位，不滑行
       try { window.scrollTo({ top: target, behavior: 'smooth' }); }
       catch(e) { se.scrollTop = target; }
       // 有些裝置停用平滑捲動（例如系統開了「減少動態效果」），沒動就直接跳過去
@@ -289,7 +427,26 @@
 
   async function runQuery(){
     const amount = Number(amountInput.value);
-    if(!amount || amount <= 0){ alert('請輸入正確的台幣金額'); return; }
+    const amountError = document.getElementById('amountError');
+    const amountRow = amountInput.closest('.amount-row');
+    if(!amount || amount <= 0){
+      amountError.textContent = '請輸入大於 0 的台幣金額。';
+      amountError.hidden = false;
+      amountRow.classList.add('invalid');
+      amountInput.focus();
+      return;
+    }
+    amountError.hidden = true;
+    amountRow.classList.remove('invalid');
+
+    // 已經有匯率就直接本機算，不連網、不轉圈，按下去立刻有結果
+    if (cachedRates) {
+      renderResult(buildResult(amount, cachedRates));
+      showOnly(resultCard);
+      flashVerdict();
+      if (firstLoad) { firstLoad = false; } else { revealResult(); }
+      return;
+    }
 
     goBtn.disabled = true;
     showOnly(loadingCard);
@@ -298,10 +455,11 @@
     try{
       const data = await queryRates(amount);
       if(data.error){ throw new Error(data.message || '腳本回報錯誤'); }
+      cachedRates = extractRates(data);
       renderResult(data);
       stopStatusCycle();
       showOnly(resultCard);
-      revealResult();
+      if (firstLoad) { firstLoad = false; } else { revealResult(); }
     }catch(err){
       stopStatusCycle();
       errorMsg.textContent = '無法取得即時匯率：' + err.message + '。請確認 Apps Script 已部署為「任何人」可存取，或稍後再試。';
@@ -347,16 +505,20 @@
     const badgeB = document.getElementById('badgeB');
     badgeA.hidden = !aWins;
     badgeB.hidden = aWins;
-    (aWins ? badgeA : badgeB).textContent = notTied ? '多 ' + pct.toFixed(1) + '%' : '幾乎持平';
+    (aWins ? badgeA : badgeB).textContent = notTied ? '划算' : '幾乎持平';
 
     animateNumber(document.getElementById('amtA'), pathA, 1100);
     animateNumber(document.getElementById('amtB'), pathB, 1100);
 
-    document.getElementById('diffText').textContent = notTied
-      ? (diff >= 0 ? '路徑 B 多換 ' : '路徑 A 多換 ') + fmtTHB(Math.abs(diff))
+    const twdIn = data['輸入台幣金額'] || Number(amountInput.value);
+    document.getElementById('verdictCtx').innerHTML =
+      '換 <b>NT$' + Number(twdIn).toLocaleString('zh-TW') + '</b> 的話';
+    document.getElementById('diffText').innerHTML = notTied
+      ? fmtTHB(Math.abs(diff)) + '<small> 泰銖之差</small>'
       : '兩條路幾乎沒差';
-    document.getElementById('diffSub').textContent = notTied
-      ? '差距 ' + pct.toFixed(1) + '%，遠大於匯率單日的正常波動'
+    document.getElementById('diffSub').innerHTML = notTied
+      ? (diff >= 0 ? '走 <b>路徑 B</b>（台灣先換美金）' : '走 <b>路徑 A</b>（泰國當地直接換）')
+        + ' 多換 ' + pct.toFixed(1) + '%<em>遠大於匯率單日的正常波動</em>'
       : '兩條路幾乎一樣，挑方便的那條就好';
     document.getElementById('rateTs').textContent = data['匯率更新時間'] || ts;
 
@@ -397,7 +559,15 @@
     noteEl.innerHTML = lines.map(t => '<div class="line"><span class="icon">⚠</span><span>' + t + '</span></div>').join('');
   }
 
+  // 一載入就先算好預設金額，使用者第一眼看到的就是答案，不用先按按鈕
+  let firstLoad = true;
+  runQuery();
+
   goBtn.addEventListener('click', runQuery);
+  document.getElementById('refreshBtn').addEventListener('click', ()=>{
+    cachedRates = null;          // 清掉快取，強制重新跟 Apps Script 要一次
+    runQuery();
+  });
   retryBtn.addEventListener('click', runQuery);
   amountInput.addEventListener('keydown', e => { if(e.key === 'Enter') runQuery(); });
 
